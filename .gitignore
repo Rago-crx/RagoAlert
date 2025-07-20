@@ -8,6 +8,7 @@ __pycache__/
 
 # VSCode 编辑器配置（可选）
 .vscode/
+.idea/
 
 # macOS 系统文件（可选）
 .DS_Store
