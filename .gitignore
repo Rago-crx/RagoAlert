@@ -1,5 +1,6 @@
 # Python 虚拟环境
 venv/
+.venv/
 
 # Python 缓存文件
 __pycache__/
@@ -11,3 +12,5 @@ __pycache__/
 # macOS 系统文件（可选）
 .DS_Store
 
+# config
+config.py
