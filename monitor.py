@@ -1,6 +1,6 @@
 from data.yahoo import get_top_nasdaq_by_volume
 from config import CHINA_TECH, recipients
-from indicators.trend import analyze_trend
+from indicators.trend import analyze_trend, TrendAnalysisResult
 from notifiers.email import send_gmail, build_trend_email_content
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, Tuple
@@ -31,18 +31,22 @@ def monitor():
 
     trends: Dict[str, str] = {}
     changes: Dict[str, Tuple[str, str]] = {}
+    results: Dict[str, TrendAnalysisResult] = {}
 
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {executor.submit(analyze_trend, sym): sym for sym in tickers}
         for future in as_completed(futures):
-            symbol, trend_list = future.result()
-            if not trend_list or len(trend_list) < 2:
+            result: TrendAnalysisResult = future.result()
+            symbol = result.symbol
+
+            if not result.trends or len(result.trends) < 2:
                 continue
 
-            current_trend = trend_list[-1]
+            current_trend = result.trends[-1]
             trends[symbol] = current_trend
+            results[symbol] = result
 
-            change = detect_trend_change(trend_list)
+            change = detect_trend_change(result.trends)
             if change:
                 changes[symbol] = change
                 logging.info(f"{symbol} 趋势变化: {change[0]} → {change[1]}")
@@ -51,6 +55,5 @@ def monitor():
 
     if trends:
         subject = "📊 股票趋势日报"
-        html_body = build_trend_email_content(trends, changes)
-        _recipients = recipients
-        send_gmail(subject, html_body, _recipients)
+        html_body = build_trend_email_content(results, changes)  # 传入完整结果对象
+        send_gmail(subject, html_body, recipients)
