@@ -23,6 +23,8 @@ class IndicatorSnapshot:
     bb_middle: float    # 布林带中轨（一般为 20 日 SMA）
     bb_lower: float     # 布林带下轨（价格下限）
 
+    rsi: float          # 新增 RSI
+
     close: float        # 最新收盘价（用于参考）
 
 @dataclass
@@ -31,18 +33,18 @@ class TrendAnalysisResult:
     trends: List[str]               # 最近 N 日的趋势判断（例如 ["up", "flat", "down", ...]）
     indicators: Optional[IndicatorSnapshot] = None  # 技术指标快照（最近一天）
     error: Optional[str] = None     # 如果分析失败，这里记录错误信息
+    signal: Optional[str] = None  # 新增
 
 
-def analyze_trend(symbol: str, window: int = 10,
-                  adx_threshold: float = 25) -> TrendAnalysisResult:
+def analyze_trend(symbol: str, window: int = 10, adx_threshold: float = 25,
+                  min_consecutive_days: int = 3) -> TrendAnalysisResult:
     try:
-        # 获取最近90天历史数据
         df = yf.Ticker(symbol).history(period='90d', interval='1d')
-        if df.shape[0] < window + 20:
+        if df.shape[0] < window + 30:
             logging.warning(f"{symbol} 数据不足")
             return TrendAnalysisResult(symbol=symbol, trends=[], error="数据不足")
 
-        # 计算指标
+        # === 指标计算 ===
         df['ema7'] = ta.ema(df['Close'], length=7)
         df['ema20'] = ta.ema(df['Close'], length=20)
 
@@ -55,13 +57,12 @@ def analyze_trend(symbol: str, window: int = 10,
         bb = ta.bbands(df['Close'], length=20, std=2.0)
         df = df.join(bb)
 
-        # 清理缺失值
-        df.dropna(inplace=True)
+        df['rsi'] = ta.rsi(df['Close'], length=14)
 
-        # 保留分析窗口
+        df.dropna(inplace=True)
         df = df.tail(window)
 
-        # 构建判断条件（向量化）
+        # === 判断条件 ===
         cond_ema_up = df['ema7'] > df['ema20']
         cond_ema_down = df['ema7'] < df['ema20']
 
@@ -75,10 +76,16 @@ def analyze_trend(symbol: str, window: int = 10,
         cond_bb_down = df['Close'] < df['BBM_20_2.0']
         cond_bb_valid = (df['Close'] < df['BBU_20_2.0']) & (df['Close'] > df['BBL_20_2.0'])
 
-        cond_up = cond_ema_up & cond_macd_up & cond_adx_up & cond_bb_up & cond_bb_valid
-        cond_down = cond_ema_down & cond_macd_down & cond_adx_down & cond_bb_down & cond_bb_valid
+        cond_rsi_not_overbought = df['rsi'] < 70
+        cond_rsi_not_oversold = df['rsi'] > 30
 
-        # 生成趋势序列
+        cond_up = (cond_ema_up & cond_macd_up & cond_adx_up &
+                   cond_bb_up & cond_bb_valid & cond_rsi_not_overbought)
+
+        cond_down = (cond_ema_down & cond_macd_down & cond_adx_down &
+                     cond_bb_down & cond_bb_valid & cond_rsi_not_oversold)
+
+        # === 生成趋势列表 ===
         trends = []
         for i in range(len(df)):
             if cond_up.iloc[i]:
@@ -88,7 +95,18 @@ def analyze_trend(symbol: str, window: int = 10,
             else:
                 trends.append("flat")
 
-        # 提取最新一日指标快照
+        # === 连续趋势判断生成 signal ===
+        def check_consecutive(trend_list: List[str], trend_type: str, n: int) -> bool:
+            return trend_list[-n:] == [trend_type] * n
+
+        signal = "hold"
+        if len(trends) >= min_consecutive_days:
+            if check_consecutive(trends, "up", min_consecutive_days):
+                signal = "buy"
+            elif check_consecutive(trends, "down", min_consecutive_days):
+                signal = "sell"
+
+        # === 构建快照 ===
         latest = df.iloc[-1]
         snapshot = IndicatorSnapshot(
             ema7=latest['ema7'],
@@ -102,11 +120,12 @@ def analyze_trend(symbol: str, window: int = 10,
             bb_upper=latest['BBU_20_2.0'],
             bb_middle=latest['BBM_20_2.0'],
             bb_lower=latest['BBL_20_2.0'],
-            close=latest['Close']
+            close=latest['Close'],
+            rsi=latest['rsi']
         )
 
-        logging.info(f"[{symbol}] 趋势: {trends}, 收盘: {latest['Close']:.2f}")
-        return TrendAnalysisResult(symbol=symbol, trends=trends, indicators=snapshot)
+        logging.info(f"[{symbol}] 趋势: {trends}, Signal: {signal}, 收盘: {latest['Close']:.2f}")
+        return TrendAnalysisResult(symbol=symbol, trends=trends, indicators=snapshot, signal=signal)
 
     except Exception as e:
         logging.error(f"[{symbol}] 趋势分析失败: {str(e)}")
