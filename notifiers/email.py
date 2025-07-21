@@ -45,6 +45,7 @@ def build_trend_email_content(
             <th>ADX</th>
             <th>布林带</th>
             <th>RSI</th>
+            <th>收盘价</th>
         </tr>
     """
 
@@ -77,6 +78,7 @@ def build_trend_email_content(
                 下轨: {indicator.bb_lower:.2f}
             </td>
             <td>{indicator.rsi:.2f}</td>
+            <td>{indicator.close:.2f}</td>
         </tr>"""
 
     html += "</table></body></html>"
