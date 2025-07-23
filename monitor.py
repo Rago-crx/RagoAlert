@@ -7,7 +7,7 @@ from typing import Dict, Tuple
 import logging
 
 
-def detect_trend_change(trend_list, window=3):
+def detect_trend_change(trend_list, window=2):
     """
     检测最近 window 天内是否发生趋势变化。
     返回（变化前的趋势，当前趋势）或 None
