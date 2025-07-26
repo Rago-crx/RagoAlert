@@ -6,7 +6,7 @@ from typing import List, Tuple, Dict
 from config import gmail_password, gmail_address
 from email.mime.multipart import MIMEMultipart
 from indicators.trend import TrendAnalysisResult  # 确保路径正确
-
+from indicators.fluctuation import FluctuationAnalysisResult # 导入 FluctuationAnalysisResult
 
 
 def build_trend_email_content(
@@ -85,7 +85,24 @@ def build_trend_email_content(
     return html
 
 
-
+def build_fluctuation_email_content(
+    result: FluctuationAnalysisResult
+) -> str:
+    """
+    构建 HTML 邮件内容，展示股票价格波动信息。
+    :param result: FluctuationAnalysisResult 对象
+    """
+    color = "green" if result.change_type == "上涨" else "red"
+    html = f"""<html><body>
+        <h2>🚨 股票价格波动提醒</h2>
+        <p>股票代码: <b>{result.symbol}</b></p>
+        <p>初始价格: ${result.initial_price:.2f}</p>
+        <p>当前价格: ${result.current_price:.2f}</p>
+        <p>价格变化: <b style='color:{color}'>{result.change_type} {result.percentage_change:.2f}%</b></p>
+        <p>请注意市场动态。</p>
+        </body></html>
+    """
+    return html
 
 
 def send_gmail(subject: str, html_body: str, to_emails: List[str]):
