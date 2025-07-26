@@ -6,6 +6,8 @@ import yfinance as yf
 import pandas_ta as ta
 import pandas as pd
 
+from config import UP_TREND_THRESHOLD, DOWN_TREND_THRESHOLD
+
 @dataclass
 class IndicatorSnapshot:
     ema7: float         # 7日指数移动平均线（短期趋势）
@@ -62,35 +64,46 @@ def analyze_trend(symbol: str, window: int = 10, adx_threshold: float = 25,
         df.dropna(inplace=True)
         df = df.tail(window)
 
-        # === 判断条件 ===
-        cond_ema_up = df['ema7'] > df['ema20']
-        cond_ema_down = df['ema7'] < df['ema20']
+        # === 判断条件 (量化为分数) ===
+        # Initialize score columns
+        df['up_score'] = 0
+        df['down_score'] = 0
 
-        cond_macd_up = (df['MACD_12_26_9'] > df['MACDs_12_26_9']) & (df['MACDh_12_26_9'].diff() > 0)
-        cond_macd_down = (df['MACD_12_26_9'] < df['MACDs_12_26_9']) & (df['MACDh_12_26_9'].diff() < 0)
+        # EMA Score
+        df['up_score'] += (df['ema7'] > df['ema20']).astype(int)
+        df['down_score'] += (df['ema7'] < df['ema20']).astype(int)
 
-        cond_adx_up = (df['adx'] > adx_threshold) & (df['plus_di'] > df['minus_di'])
-        cond_adx_down = (df['adx'] > adx_threshold) & (df['plus_di'] < df['minus_di'])
+        # MACD Score
+        df['up_score'] += ((df['MACD_12_26_9'] > df['MACDs_12_26_9']) & (df['MACDh_12_26_9'].diff() > 0)).astype(int)
+        df['down_score'] += ((df['MACD_12_26_9'] < df['MACDs_12_26_9']) & (df['MACDh_12_26_9'].diff() < 0)).astype(int)
 
-        cond_bb_up = df['Close'] > df['BBM_20_2.0']
-        cond_bb_down = df['Close'] < df['BBM_20_2.0']
-        cond_bb_valid = (df['Close'] < df['BBU_20_2.0']) & (df['Close'] > df['BBL_20_2.0'])
+        # ADX Score
+        df['up_score'] += ((df['adx'] > adx_threshold) & (df['plus_di'] > df['minus_di'])).astype(int)
+        df['down_score'] += ((df['adx'] > adx_threshold) & (df['plus_di'] < df['minus_di'])).astype(int)
 
-        cond_rsi_not_overbought = df['rsi'] < 70
-        cond_rsi_not_oversold = df['rsi'] > 30
+        # Bollinger Bands Score
+        # For 'up': Close above middle band and within upper band
+        df['up_score'] += ((df['Close'] > df['BBM_20_2.0']) & (df['Close'] < df['BBU_20_2.0'])).astype(int)
+        # For 'down': Close below middle band and within lower band
+        df['down_score'] += ((df['Close'] < df['BBM_20_2.0']) & (df['Close'] > df['BBL_20_2.0'])).astype(int)
 
-        cond_up = (cond_ema_up & cond_macd_up & cond_adx_up &
-                   cond_bb_up & cond_bb_valid & cond_rsi_not_overbought)
+        # RSI Score
+        df['up_score'] += (df['rsi'] < 70).astype(int) # Not overbought is a positive sign for 'up'
+        df['down_score'] += (df['rsi'] > 30).astype(int) # Not oversold is a positive sign for 'down'
 
-        cond_down = (cond_ema_down & cond_macd_down & cond_adx_down &
-                     cond_bb_down & cond_bb_valid & cond_rsi_not_oversold)
+        # Define thresholds for trend classification based on scores
+        # Max possible score for up/down is 5 (EMA, MACD, ADX, BB, RSI)
+
 
         # === 生成趋势列表 ===
         trends = []
         for i in range(len(df)):
-            if cond_up.iloc[i]:
+            current_up_score = df['up_score'].iloc[i]
+            current_down_score = df['down_score'].iloc[i]
+
+            if current_up_score >= UP_TREND_THRESHOLD and current_up_score > current_down_score:
                 trends.append("up")
-            elif cond_down.iloc[i]:
+            elif current_down_score >= DOWN_TREND_THRESHOLD and current_down_score > current_up_score:
                 trends.append("down")
             else:
                 trends.append("flat")
