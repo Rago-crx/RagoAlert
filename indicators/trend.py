@@ -4,9 +4,8 @@ from typing import List, Optional
 
 import yfinance as yf
 import pandas_ta as ta
-import pandas as pd
 
-from config import UP_TREND_THRESHOLD, DOWN_TREND_THRESHOLD
+from config import UP_TREND_THRESHOLD, DOWN_TREND_THRESHOLD, SIGNAL_WEIGHTS, BUY_SIGNAL_THRESHOLD, SELL_SIGNAL_THRESHOLD
 
 @dataclass
 class IndicatorSnapshot:
@@ -23,7 +22,7 @@ class IndicatorSnapshot:
 
     bb_upper: float     # 布林带上轨（价格上限）
     bb_middle: float    # 布林带中轨（一般为 20 日 SMA）
-    bb_lower: float     # 布林带下轨（价格下限）
+    bb_lower: float     # 布林带下限）
 
     rsi: float          # 新增 RSI
 
@@ -91,10 +90,6 @@ def analyze_trend(symbol: str, window: int = 10, adx_threshold: float = 25,
         df['up_score'] += (df['rsi'] < 70).astype(int) # Not overbought is a positive sign for 'up'
         df['down_score'] += (df['rsi'] > 30).astype(int) # Not oversold is a positive sign for 'down'
 
-        # Define thresholds for trend classification based on scores
-        # Max possible score for up/down is 5 (EMA, MACD, ADX, BB, RSI)
-
-
         # === 生成趋势列表 ===
         trends = []
         for i in range(len(df)):
@@ -108,16 +103,49 @@ def analyze_trend(symbol: str, window: int = 10, adx_threshold: float = 25,
             else:
                 trends.append("flat")
 
-        # === 连续趋势判断生成 signal ===
-        def check_consecutive(trend_list: List[str], trend_type: str, n: int) -> bool:
-            return trend_list[-n:] == [trend_type] * n
+        # === 信号判断 (基于加权分数和阈值) ===
+        # Use weights from config.py
+        weights = SIGNAL_WEIGHTS
 
-        signal = "hold"
-        if len(trends) >= min_consecutive_days:
-            if check_consecutive(trends, "up", min_consecutive_days):
-                signal = "buy"
-            elif check_consecutive(trends, "down", min_consecutive_days):
-                signal = "sell"
+        # Calculate daily buy/sell scores
+        df['buy_signal_score'] = 0.0
+        df['sell_signal_score'] = 0.0
+
+        # EMA contribution
+        df['buy_signal_score'] += ((df['ema7'] > df['ema20']) * weights['ema_cross'])
+        df['sell_signal_score'] += ((df['ema7'] < df['ema20']) * weights['ema_cross'])
+
+        # MACD contribution
+        df['buy_signal_score'] += ((df['MACD_12_26_9'] > df['MACDs_12_26_9']) & (df['MACDh_12_26_9'] > 0)) * weights['macd_cross']
+        df['sell_signal_score'] += ((df['MACD_12_26_9'] < df['MACDs_12_26_9']) & (df['MACDh_12_26_9'] < 0)) * weights['macd_cross']
+
+        # ADX contribution (only if ADX indicates strong trend)
+        df['buy_signal_score'] += ((df['adx'] > adx_threshold) & (df['plus_di'] > df['minus_di'])) * weights['adx_strength']
+        df['sell_signal_score'] += ((df['adx'] > adx_threshold) & (df['plus_di'] < df['minus_di'])) * weights['adx_strength']
+
+        # Bollinger Bands contribution
+        # Buy: Close above middle band, approaching lower band (rebound) or breaking upper band (strong momentum)
+        df['buy_signal_score'] += ((df['Close'] > df['BBM_20_2.0']) | (df['Close'] < df['BBL_20_2.0'])) * weights['bb_position']
+        # Sell: Close below middle band, approaching upper band (rejection) or breaking lower band (strong momentum)
+        df['sell_signal_score'] += ((df['Close'] < df['BBM_20_2.0']) | (df['Close'] > df['BBU_20_2.0'])) * weights['bb_position']
+
+        # RSI contribution
+        df['buy_signal_score'] += (df['rsi'] < 30) * weights['rsi_level'] # Oversold
+        df['sell_signal_score'] += (df['rsi'] > 70) * weights['rsi_level'] # Overbought
+
+        # Use signal thresholds from config.py
+        buy_threshold = BUY_SIGNAL_THRESHOLD
+        sell_threshold = SELL_SIGNAL_THRESHOLD
+
+        latest_buy_score = df['buy_signal_score'].iloc[-1]
+        latest_sell_score = df['sell_signal_score'].iloc[-1]
+
+        if latest_buy_score >= buy_threshold and latest_buy_score > latest_sell_score:
+            signal = "buy"
+        elif latest_sell_score >= sell_threshold and latest_sell_score > latest_buy_score:
+            signal = "sell"
+        else:
+            signal = "hold" # Default or if scores are not decisive
 
         # === 构建快照 ===
         latest = df.iloc[-1]
@@ -137,7 +165,7 @@ def analyze_trend(symbol: str, window: int = 10, adx_threshold: float = 25,
             rsi=latest['rsi']
         )
 
-        logging.info(f"[{symbol}] 趋势: {trends}, Signal: {signal}, 收盘: {latest['Close']:.2f}")
+        logging.info(f"[{symbol}] 趋势: {trends}, Signal: {signal}, Buy Score: {latest_buy_score:.2f}, Sell Score: {latest_sell_score:.2f}, 收盘: {latest['Close']:.2f}")
         return TrendAnalysisResult(symbol=symbol, trends=trends, indicators=snapshot, signal=signal)
 
     except Exception as e:
