@@ -1,125 +1,109 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.utils import formataddr
-from typing import List, Tuple, Dict
+class TrendMonitor:
+    @staticmethod
+    def detect_trend_change(trend_list, window=2):
+        """
+        检测最近 window 天内是否发生趋势变化。
+        返回（变化前的趋势，当前趋势）或 None
+        """
+        if len(trend_list) < window:
+            return None
 
-from config import gmail_password, gmail_address
-from email.mime.multipart import MIMEMultipart
-from indicators.trend import TrendAnalysisResult  # 确保路径正确
-from indicators.fluctuation import FluctuationAnalysisResult # 导入 FluctuationAnalysisResult
+        recent = trend_list[-window:]
+        if len(set(recent)) == 1:
+            return None
 
+        for i in range(-window + 1, 0):
+            if recent[i] != recent[i - 1]:
+                return recent[i - 1], recent[i]
+        return None
 
-def build_trend_email_content(
-    trends: Dict[str, TrendAnalysisResult],
-    changes: Dict[str, Tuple[str, str]]
-) -> str:
-    """
-    构建 HTML 邮件内容，展示股票趋势和技术指标。
-    """
+    @staticmethod
+    def _is_us_market_time(target_hour_utc: int, target_minute_utc: int, tolerance_minutes: int = 5) -> bool:
+        """
+        检查当前 UTC 时间是否在指定的美股交易相关时间点附近。
+        """
+        now_utc = datetime.utcnow()
+        target_time_utc = now_utc.replace(hour=target_hour_utc, minute=target_minute_utc, second=0, microsecond=0)
 
-    def color_for_trend(_trend: str) -> str:
-        return {
-            'up': 'green',
-            'down': 'red',
-            'flat': 'gray',
-            'unknown': 'black'
-        }.get(_trend, 'black')
+        if now_utc.weekday() >= 5:  # 周末不执行
+            logging.info("当前是周末，不执行趋势监控。")
+            return False
 
-    def color_for_signal(_signal: str) -> str:
-        return {
-            'buy': 'green',
-            'sell': 'red',
-            'hold': 'gray'
-        }.get(_signal, 'black')
+        return abs((now_utc - target_time_utc).total_seconds()) <= tolerance_minutes * 60
 
-    html = """<html><body>
-        <h2>📈 股票趋势日报</h2>
-        <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse;">
-        <tr>
-            <th>股票</th>
-            <th>当前趋势</th>
-            <th>趋势变化</th>
-            <th>策略建议</th>
-            <th>EMA状态</th>
-            <th>MACD状态</th>
-            <th>ADX</th>
-            <th>布林带</th>
-            <th>RSI</th>
-            <th>收盘价</th>
-        </tr>
-    """
+    _last_run_time: Dict[str, datetime] = {
+        "pre_market": datetime.min,
+        "post_market": datetime.min
+    }
 
-    sorted_symbols = sorted(trends.keys(), key=lambda sym: sym in changes, reverse=True)
+    @staticmethod
+    def _execute_trend_analysis():
+        """
+        核心执行逻辑：分析趋势、检测变化、发送邮件
+        """
+        tickers = get_top_nasdaq_by_volume() + CHINA_TECH
+        logging.info(f"监控以下股票: {tickers}")
 
-    for symbol in sorted_symbols:
-        result = trends[symbol]
-        indicator = result.indicators
-        current_trend = getattr(result, 'current_trend', result.trends[-1] if result.trends else "unknown")
-        signal = result.signal or "hold"
-        signal_color = color_for_signal(signal)
-        trend_color = color_for_trend(current_trend)
+        trends: Dict[str, TrendAnalysisResult] = {}
+        changes: Dict[str, Tuple[str, str]] = {}
 
-        change_info = ""
-        if symbol in changes:
-            prev, curr = changes[symbol]
-            change_info = f"{prev} → <b style='color:{trend_color}'>{curr}</b>"
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            futures = {executor.submit(analyze_trend, sym): sym for sym in tickers}
+            for future in as_completed(futures):
+                sym = futures[future]
+                try:
+                    result = future.result()
+                    trends[sym] = result
 
-        html += f"""<tr>
-            <td>{symbol}</td>
-            <td style="color:{trend_color}"><b>{current_trend}</b></td>
-            <td>{change_info}</td>
-            <td style="color:{signal_color}"><b>{signal.upper()}</b></td>
-            <td>{'在上方' if indicator.ema7 > indicator.ema20 else '在下方'}</td>
-            <td>{"MACD柱>0 且 DIF>DEA" if indicator.macd_hist > 0 and indicator.macd > indicator.macd_signal else "弱势"}</td>
-            <td>{indicator.adx:.2f}</td>
-            <td>
-                中轨: {indicator.bb_middle:.2f}<br>
-                上轨: {indicator.bb_upper:.2f}<br>
-                下轨: {indicator.bb_lower:.2f}
-            </td>
-            <td>{indicator.rsi:.2f}</td>
-            <td>{indicator.close:.2f}</td>
-        </tr>"""
+                    # 检测趋势变化
+                    change = TrendMonitor.detect_trend_change(result.trends)
+                    if change:
+                        changes[sym] = change
 
-    html += "</table></body></html>"
-    return html
+                except Exception as e:
+                    logging.error(f"[{sym}] 趋势分析失败: {str(e)}")
 
+        if changes:
+            logging.info(f"检测到趋势变化: {changes}")
+        else:
+            logging.info("未检测到趋势变化。")
 
-def build_fluctuation_email_content(
-    result: FluctuationAnalysisResult
-) -> str:
-    """
-    构建 HTML 邮件内容，展示股票价格波动信息。
-    :param result: FluctuationAnalysisResult 对象
-    """
-    color = "green" if result.change_type == "上涨" else "red"
-    html = f"""<html><body>
-        <h2>🚨 股票价格波动提醒</h2>
-        <p>股票代码: <b>{result.symbol}</b></p>
-        <p>初始价格: ${result.initial_price:.2f}</p>
-        <p>当前价格: ${result.current_price:.2f}</p>
-        <p>价格变化: <b style='color:{color}'>{result.change_type} {result.percentage_change:.2f}%</b></p>
-        <p>请注意市场动态。</p>
-        </body></html>
-    """
-    return html
+        # 构建邮件并发送
+        try:
+            html_content = build_trend_email_content(trends, changes)
+            send_gmail(
+                subject="📈 股票趋势监控日报",
+                html_body=html_content,
+                to_emails=recipients
+            )
+        except Exception as e:
+            logging.error(f"发送邮件失败: {str(e)}")
 
+    @staticmethod
+    def run(time_check=True):
+        now = datetime.utcnow()
+        is_daylight_saving = 3 <= now.month <= 10
+        pre_market_hour_utc = 13 if is_daylight_saving else 14
+        post_market_hour_utc = 21 if is_daylight_saving else 22
 
-def send_gmail(subject: str, html_body: str, to_emails: List[str]):
-    msg = MIMEText(html_body, 'html')  # 使用 HTML 内容
-    msg['Subject'] = subject
-    msg['From'] = formataddr(('Notifier', gmail_address))
-    msg['To'] = ', '.join(to_emails)
+        if not time_check:
+            logging.info("检测到跳过时间检测，开始趋势监控...")
+            TrendMonitor._execute_trend_analysis()
+            TrendMonitor._last_run_time["pre_market"] = now
+            return
 
-    smtp_server = 'smtp.gmail.com'
-    smtp_port = 465
-    smtp_user = gmail_address
-    smtp_pass = gmail_password
+        if TrendMonitor._is_us_market_time(pre_market_hour_utc, 0) and \
+           (now - TrendMonitor._last_run_time["pre_market"]) > timedelta(hours=23):
+            logging.info("检测到美股盘前执行时间，开始趋势监控...")
+            TrendMonitor._execute_trend_analysis()
+            TrendMonitor._last_run_time["pre_market"] = now
+            return
 
-    try:
-        with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(smtp_user, to_emails, msg.as_string())
-        print("[SUCCESS] 邮件发送成功 ✅")
-    except Exception as e:
-        print(f"[ERROR] 邮件发送失败 ❌: {str(e)}")
+        if TrendMonitor._is_us_market_time(post_market_hour_utc, 0) and \
+           (now - TrendMonitor._last_run_time["post_market"]) > timedelta(hours=23):
+            logging.info("检测到美股盘后执行时间，开始趋势监控...")
+            TrendMonitor._execute_trend_analysis()
+            TrendMonitor._last_run_time["post_market"] = now
+            return
+
+        logging.info("当前时间不在趋势监控的执行时间点内。")
