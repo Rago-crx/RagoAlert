@@ -110,3 +110,7 @@ class TrendMonitor:
             return
 
         logging.info("当前时间不在趋势监控的执行时间点内。")
+
+if __name__ == "__main__":
+    TrendMonitor.run()
+
