@@ -13,7 +13,7 @@ class TrendMonitor:
         """
         检测最近 window 天内是否发生趋势变化。
         返回（变化前的趋势，当前趋势）或 None
-        """https://github.com/Rago-crx/RagoAlert/blob/main/monitors/trend_monitor.py
+        """
         if len(trend_list) < window:
             return None
 
