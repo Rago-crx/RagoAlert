@@ -1,3 +1,12 @@
+from data.yahoo import get_top_nasdaq_by_volume
+from config import CHINA_TECH, recipients
+from indicators.trend import analyze_trend, TrendAnalysisResult
+from notifiers.email import send_gmail, build_trend_email_content
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, Tuple
+import logging
+from datetime import datetime, timedelta # 导入 datetime 和 timedelta
+
 class TrendMonitor:
     @staticmethod
     def detect_trend_change(trend_list, window=2):
