@@ -59,7 +59,7 @@ class TrendMonitor:
     }
 
     @staticmethod
-    def run():
+    def run(time_check=True):
         """
         运行股票趋势监控。
         此方法设计为由外部调度器在特定时间点调用。
@@ -76,6 +76,11 @@ class TrendMonitor:
         # 夏令时 (UTC-4): UTC 21:00
         # 冬令时 (UTC-5): UTC 22:00
         post_market_hour_utc = 21 if is_daylight_saving else 22
+        if not time_check:
+            logging.info("检测到跳过时间检测，开始趋势监控...")
+            TrendMonitor._execute_trend_analysis()
+            TrendMonitor._last_run_time["pre_market"] = now
+            return
 
         # 检查是否是盘前执行时间点
         if TrendMonitor._is_us_market_time(pre_market_hour_utc, 0) and \
@@ -94,3 +99,7 @@ class TrendMonitor:
             return # 执行完毕后退出，等待下次调度
 
         logging.info("当前时间不在趋势监控的执行时间点内。")
+
+if __name__ == '__main__':
+    TrendMonitor.run(time_check=False)
+
