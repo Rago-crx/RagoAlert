@@ -53,40 +53,34 @@ class TrendMonitor:
         tickers = get_top_nasdaq_by_volume() + CHINA_TECH
         logging.info(f"监控以下股票: {tickers}")
 
-        trends: Dict[str, TrendAnalysisResult] = {}
+        trends: Dict[str, str] = {}
         changes: Dict[str, Tuple[str, str]] = {}
+        results: Dict[str, TrendAnalysisResult] = {}
 
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = {executor.submit(analyze_trend, sym): sym for sym in tickers}
             for future in as_completed(futures):
-                sym = futures[future]
-                try:
-                    result = future.result()
-                    trends[sym] = result
-
-                    # 检测趋势变化
-                    change = TrendMonitor.detect_trend_change(result.trends)
-                    if change:
-                        changes[sym] = change
-
-                except Exception as e:
-                    logging.error(f"[{sym}] 趋势分析失败: {str(e)}")
-
-        if changes:
-            logging.info(f"检测到趋势变化: {changes}")
-        else:
-            logging.info("未检测到趋势变化。")
-
-        # 构建邮件并发送
-        try:
-            html_content = build_trend_email_content(trends, changes)
-            send_gmail(
-                subject="📈 股票趋势监控日报",
-                html_body=html_content,
-                to_emails=recipients
-            )
-        except Exception as e:
-            logging.error(f"发送邮件失败: {str(e)}")
+                result: TrendAnalysisResult = future.result()
+                symbol = result.symbol
+    
+                if not result.trends or len(result.trends) < 2:
+                    continue
+    
+                current_trend = result.trends[-1]
+                trends[symbol] = current_trend
+                results[symbol] = result
+    
+                change = TrendMonitor.detect_trend_change(result.trends)
+                if change:
+                    changes[symbol] = change
+                    logging.info(f"{symbol} 趋势变化: {change[0]} → {change[1]}")
+                else:
+                    logging.info(f"{symbol} 趋势未变: {current_trend}")
+    
+        if trends:
+            subject = "📊 股票趋势日报"
+            html_body = build_trend_email_content(results, changes)  # 传入完整结果对象
+            send_gmail(subject, html_body, recipients)
 
     @staticmethod
     def run(time_check=True):
