@@ -112,5 +112,5 @@ class TrendMonitor:
         logging.info("当前时间不在趋势监控的执行时间点内。")
 
 if __name__ == "__main__":
-    TrendMonitor.run()
+    TrendMonitor.run(time_check=False)
 
