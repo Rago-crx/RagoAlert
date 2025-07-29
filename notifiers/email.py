@@ -32,6 +32,23 @@ def build_trend_email_content(
             'hold': 'gray'
         }.get(_signal, 'black')
 
+    def color_for_close_price(close_price: float, bb_upper: float, bb_lower: float) -> str:
+        """
+        根据收盘价的位置设置颜色：
+        - 上轨：绿色
+        - 下轨：红色
+        - 中轨：黄色
+        - 上下轨之间：蓝色
+        """
+        if close_price > bb_upper:
+            return 'green'
+        elif close_price < bb_lower:
+            return 'red'
+        elif close_price == (bb_upper + bb_lower) / 2:
+            return 'yellow'
+        else:
+            return 'blue'
+
     html = """<html><body>
         <h2>📈 股票趋势日报</h2>
         <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse;">
@@ -64,6 +81,10 @@ def build_trend_email_content(
             prev, curr = changes[symbol]
             change_info = f"{prev} → <b style='color:{trend_color}'>{curr}</b>"
 
+        close_price_color = color_for_close_price(
+            indicator.close, indicator.bb_upper, indicator.bb_lower
+        )
+
         html += f"""<tr>
             <td>{symbol}</td>
             <td style="color:{trend_color}"><b>{current_trend}</b></td>
@@ -78,31 +99,12 @@ def build_trend_email_content(
                 下轨: {indicator.bb_lower:.2f}
             </td>
             <td>{indicator.rsi:.2f}</td>
-            <td>{indicator.close:.2f}</td>
+            <td style="color:{close_price_color};"><b>{indicator.close:.2f}</b></td>
         </tr>"""
 
     html += "</table></body></html>"
     return html
 
-
-def build_fluctuation_email_content(
-    result: FluctuationAnalysisResult
-) -> str:
-    """
-    构建 HTML 邮件内容，展示股票价格波动信息。
-    :param result: FluctuationAnalysisResult 对象
-    """
-    color = "green" if result.change_type == "上涨" else "red"
-    html = f"""<html><body>
-        <h2>🚨 股票价格波动提醒</h2>
-        <p>股票代码: <b>{result.symbol}</b></p>
-        <p>初始价格: ${result.initial_price:.2f}</p>
-        <p>当前价格: ${result.current_price:.2f}</p>
-        <p>价格变化: <b style='color:{color}'>{result.change_type} {result.percentage_change:.2f}%</b></p>
-        <p>请注意市场动态。</p>
-        </body></html>
-    """
-    return html
 
 
 def send_gmail(subject: str, html_body: str, to_emails: List[str]):
