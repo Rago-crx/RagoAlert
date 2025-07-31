@@ -87,6 +87,8 @@ class FluctuationMonitor:
                 time.sleep(60) # 等待一分钟
                 continue
 
+            fluctuation_results_to_notify = [] # Step 1: Collect results for a single email
+
             for symbol in FLUCTUATION_MONITOR_SYMBOLS:
                 current_price = get_current_price(symbol)
                 if current_price == 0.0:
@@ -116,12 +118,17 @@ class FluctuationMonitor:
                         logging.info(f"{symbol}: 波动达到阈值，但距离上次通知不足5分钟，跳过发送。")
                         continue
 
-                    subject = f"🚨 股票波动提醒: {analysis_result.symbol} {analysis_result.change_type} {analysis_result.percentage_change:.2f}%"
-                    html_body = build_fluctuation_email_content(analysis_result) # 传入 FluctuationAnalysisResult 对象
-                    send_gmail(subject, html_body, recipients)
-                    FluctuationMonitor._last_notification_time[symbol] = now # 更新通知时间
-                    logging.info(f"{symbol}: 价格在过去一分钟内 {analysis_result.change_type} {analysis_result.percentage_change:.2f}%，已发送邮件。")
+                    fluctuation_results_to_notify.append(analysis_result) # Step 1: Add to list
+                    FluctuationMonitor._last_notification_time[symbol] = now # Update notification time for this symbol
+                    logging.info(f"{symbol}: 价格在过去一分钟内 {analysis_result.change_type} {analysis_result.percentage_change:.2f}%，已标记待发送。")
                 else:
                     logging.info(f"{symbol}: 价格波动 {analysis_result.percentage_change:.2f}%，未达到阈值。")
+
+            # Step 1: Send a single email if there are any fluctuations to report
+            if fluctuation_results_to_notify:
+                subject = "🚨 股票波动提醒"
+                html_body = build_fluctuation_email_content(fluctuation_results_to_notify) # Step 2: Pass list to email content builder
+                send_gmail(subject, html_body, recipients)
+                logging.info(f"已发送包含 {len(fluctuation_results_to_notify)} 支股票波动信息的邮件。")
 
             time.sleep(60)  # 每分钟运行一次

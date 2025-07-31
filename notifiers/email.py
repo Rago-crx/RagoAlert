@@ -106,19 +106,39 @@ def build_trend_email_content(
     return html
 
 def build_fluctuation_email_content(
-    result: FluctuationAnalysisResult
+    results: List[FluctuationAnalysisResult] # Step 2: Accept a list of results
 ) -> str:
     """
     构建 HTML 邮件内容，展示股票价格波动信息。
-    :param result: FluctuationAnalysisResult 对象
+    :param results: FluctuationAnalysisResult 对象的列表
     """
-    color = "green" if result.change_type == "上涨" else "red"
-    html = f"""<html><body>
+    if not results:
+        return "<html><body><p>没有股票波动信息。</p></body></html>"
+
+    html = """<html><body>
         <h2>🚨 股票价格波动提醒</h2>
-        <p>股票代码: <b>{result.symbol}</b></p>
-        <p>初始价格: ${result.initial_price:.2f}</p>
-        <p>当前价格: ${result.current_price:.2f}</p>
-        <p>价格变化: <b style='color:{color}'>{result.change_type} {result.percentage_change:.2f}%</b></p>
+        <table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse;">
+        <tr>
+            <th>股票代码</th>
+            <th>初始价格</th>
+            <th>当前价格</th>
+            <th>变化类型</th>
+            <th>百分比变化</th>
+        </tr>
+    """
+
+    for result in results: # Step 2: Iterate through the list
+        color = "green" if result.change_type == "上涨" else "red"
+        html += f"""
+        <tr>
+            <td><b>{result.symbol}</b></td>
+            <td>${result.initial_price:.2f}</td>
+            <td>${result.current_price:.2f}</td>
+            <td style='color:{color}'>{result.change_type}</td>
+            <td style='color:{color}'>{result.percentage_change:.2f}%</td>
+        </tr>
+        """
+    html += """</table>
         <p>请注意市场动态。</p>
         </body></html>
     """
