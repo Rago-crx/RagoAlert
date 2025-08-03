@@ -1,12 +1,11 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.utils import formataddr
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 
-from config import gmail_password, gmail_address
 from email.mime.multipart import MIMEMultipart
-from indicators.trend import TrendAnalysisResult  # 确保路径正确
-from indicators.fluctuation import FluctuationAnalysisResult # 导入 FluctuationAnalysisResult
+from ..indicators.trend import TrendAnalysisResult
+from ..indicators.fluctuation import FluctuationAnalysisResult
 
 
 def build_trend_email_content(
@@ -144,21 +143,42 @@ def build_fluctuation_email_content(
     """
     return html
 
-def send_gmail(subject: str, html_body: str, to_emails: List[str]):
-    msg = MIMEText(html_body, 'html')  # 使用 HTML 内容
+def send_gmail(
+    subject: str, 
+    html_body: str, 
+    to_emails: List[str],
+    smtp_server: str = "smtp.gmail.com",
+    smtp_port: int = 465,
+    smtp_user: Optional[str] = None,
+    smtp_pass: Optional[str] = None,
+    sender_name: str = "RagoAlert"
+):
+    """
+    发送Gmail邮件，支持自定义SMTP配置
+    
+    Args:
+        subject: 邮件主题
+        html_body: HTML邮件正文
+        to_emails: 收件人邮箱列表
+        smtp_server: SMTP服务器地址
+        smtp_port: SMTP端口
+        smtp_user: 发送邮箱
+        smtp_pass: 邮箱密码
+        sender_name: 发送者名称
+    """
+    if not smtp_user or not smtp_pass:
+        raise ValueError("发送邮箱账号和密码不能为空")
+    
+    msg = MIMEText(html_body, 'html')
     msg['Subject'] = subject
-    msg['From'] = formataddr(('Notifier', gmail_address))
+    msg['From'] = formataddr((sender_name, smtp_user))
     msg['To'] = ', '.join(to_emails)
-
-    smtp_server = 'smtp.gmail.com'
-    smtp_port = 465
-    smtp_user = gmail_address
-    smtp_pass = gmail_password
 
     try:
         with smtplib.SMTP_SSL(smtp_server, smtp_port) as server:
             server.login(smtp_user, smtp_pass)
             server.sendmail(smtp_user, to_emails, msg.as_string())
-        print("[SUCCESS] 邮件发送成功 ✅")
+        print(f"[SUCCESS] 邮件发送成功 ✅ -> {', '.join(to_emails)}")
     except Exception as e:
         print(f"[ERROR] 邮件发送失败 ❌: {str(e)}")
+        raise  # 重新抛出异常以便上层处理

@@ -9,5 +9,20 @@ schedule>=1.2.2
 requests>=2.32.4
 python-dateutil>=2.9.0
 pytz>=2025.2
-APScheduler>=3.10.4 # 添加 APScheduler
+APScheduler>=3.10.4
+
+# Web框架和API
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic[email]>=2.5.0
+
+# 配置管理
+PyYAML>=6.0
+
+# 开发工具
+python-multipart>=0.0.6  # FastAPI文件上传支持
+
+# 测试工具
+pytest>=7.0.0
+pytest-asyncio>=0.20.0
 
