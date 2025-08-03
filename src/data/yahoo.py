@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import List, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from config import NASDAQ_SYMBOLS
+from config.config_manager import config_manager
 
 def fetch_volume(symbol):
     try:
@@ -17,8 +17,13 @@ def fetch_volume(symbol):
 
 def get_top_nasdaq_by_volume(n=20):
     volumes = {}
+    # 获取NASDAQ核心股票池
+    nasdaq_symbols = config_manager.system_config.stock_pools.get("NASDAQ_CORE", [
+        "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "META", "NFLX", "NVDA", "AMD", "INTC"
+    ])
+    
     with ThreadPoolExecutor(max_workers=3) as executor:
-        futures = {executor.submit(fetch_volume, sym): sym for sym in NASDAQ_SYMBOLS}
+        futures = {executor.submit(fetch_volume, sym): sym for sym in nasdaq_symbols}
         for future in as_completed(futures):
             symbol, volume = future.result()
             volumes[symbol] = volume

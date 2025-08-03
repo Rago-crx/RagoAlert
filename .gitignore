@@ -13,5 +13,25 @@ __pycache__/
 # macOS 系统文件（可选）
 .DS_Store
 
-# config
+# 配置文件（包含敏感信息）
 config.py
+*.yaml
+!config/config_template.yaml  # 保留配置模板
+!config/config_dev.yaml       # 保留开发测试配置
+*.json
+
+# 日志文件
+*.log
+ragoalert.log
+
+# 证书文件
+*.pem
+*.key
+*.crt
+
+# 数据库文件
+*.db
+*.sqlite
+
+# 测试数据缓存
+test_data_cache/

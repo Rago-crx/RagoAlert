@@ -1,47 +1,113 @@
-# run_monitors.py
-from monitors.trend_monitor import TrendMonitor
-from monitors.fluctuation_monitor import FluctuationMonitor
-import threading
+"""
+RagoAlert 主程序
+启动多用户监控系统和Web配置界面
+"""
+
 import logging
-from apscheduler.schedulers.background import BackgroundScheduler
+import threading
 import time
+import sys
 from datetime import datetime
 
-if __name__ == "__main__":
-    logging.info("启动所有监控器...")
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('ragoalert.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
-    scheduler = BackgroundScheduler()
+from src.multi_user_monitor import monitor_manager
+from config.config_manager import config_manager
+import uvicorn
+from src.web_api import app
 
-    # 调度波动监控器 (每分钟运行一次)
-    # 波动监控器内部有自己的循环和时间判断，所以可以直接在一个线程中启动
-    fluctuation_thread = threading.Thread(target=FluctuationMonitor.run)
-    fluctuation_thread.daemon = True  # 设置为守护线程，主程序退出时它也会退出
-    fluctuation_thread.start()
-    logging.info("波动监控器已启动。")
 
-    # 调度趋势监控器
-    # 趋势监控器现在是按需执行，我们使用 APScheduler 在特定时间调用它
-    # 假设美股盘前 UTC 13:00 (夏令时) / 14:00 (冬令时)
-    # 假设美股盘后 UTC 21:00 (夏令时) / 22:00 (冬令时)
-    # 注意：这里的小时是 UTC 时间
-
-    # 每天在 UTC 13:00 和 21:00 附近运行趋势监控 (夏令时示例)
-    # 你需要根据实际的夏令时/冬令时转换来调整这些时间qui
-    # 更精确的做法是在 TrendMonitor.run() 内部判断当前是夏令时还是冬令时，然后根据当前时间决定是否执行
-    # 我们已经将这个逻辑放到了 TrendMonitor.run() 内部，所以这里可以简单地每小时或每半小时调用一次 run()
-    # 让 run() 内部的逻辑去判断是否是正确的执行时间点。
-
-    # 为了确保在目标时间点附近能被触发，可以设置一个更频繁的调度，例如每30分钟检查一次
-    scheduler.add_job(TrendMonitor.run, 'interval', minutes=30, id='trend_monitor_job')
-    logging.info("趋势监控器调度已设置 (每30分钟检查一次执行时间)。")
-
-    scheduler.start()
-    logging.info("调度器已启动。")
-
+def start_web_service():
+    """启动Web配置服务"""
     try:
-        # 保持主线程运行，以便调度器和子线程可以继续工作
+        port = config_manager.system_config.web_port
+        logging.info(f"启动Web配置服务，端口: {port}")
+        uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
+    except Exception as e:
+        logging.error(f"Web服务启动失败: {e}")
+
+
+def main():
+    """主程序入口"""
+    logging.info("=" * 50)
+    logging.info("🚀 RagoAlert 多用户股票监控系统启动")
+    logging.info("=" * 50)
+    
+    try:
+        # 显示系统信息
+        all_users = config_manager.get_all_users()
+        logging.info(f"📊 系统状态:")
+        logging.info(f"   - 注册用户数: {len(all_users)}")
+        logging.info(f"   - Web管理端口: {config_manager.system_config.web_port}")
+        logging.info(f"   - 日志级别: {config_manager.system_config.log_level}")
+        
+        if all_users:
+            fluctuation_users = [email for email, user in all_users.items() if user.fluctuation.enabled]
+            trend_users = [email for email, user in all_users.items() if user.trend.enabled]
+            logging.info(f"   - 波动监控用户: {len(fluctuation_users)}")
+            logging.info(f"   - 趋势监控用户: {len(trend_users)}")
+        else:
+            logging.warning("⚠️  当前没有注册用户，请通过Web界面添加用户配置")
+        
+        # 启动Web服务 (在后台线程)
+        web_thread = threading.Thread(
+            target=start_web_service,
+            name="WebServiceThread",
+            daemon=True
+        )
+        web_thread.start()
+        logging.info("✅ Web配置服务已启动")
+        
+        # 等待Web服务启动
+        time.sleep(2)
+        
+        # 启动多用户监控管理器
+        monitor_manager.start()
+        logging.info("✅ 多用户监控系统已启动")
+        
+        # 显示访问信息
+        logging.info(f"🌐 Web管理界面: http://localhost:{config_manager.system_config.web_port}/admin")
+        logging.info("📝 系统已启动完成，按 Ctrl+C 停止")
+        
+        # 主循环 - 保持程序运行
         while True:
-            time.sleep(1)
-    except (KeyboardInterrupt, SystemExit):
-        scheduler.shutdown()
-        logging.info("程序已关闭。")
+            try:
+                time.sleep(10)
+                
+                # 定期检查系统状态
+                status = monitor_manager.get_status()
+                if not status["running"]:
+                    logging.warning("⚠️  监控系统意外停止，尝试重新启动...")
+                    monitor_manager.start()
+                
+            except KeyboardInterrupt:
+                logging.info("👋 接收到停止信号...")
+                break
+            except Exception as e:
+                logging.error(f"主循环异常: {e}")
+                time.sleep(30)  # 出错后等待30秒再继续
+    
+    except Exception as e:
+        logging.error(f"程序启动失败: {e}")
+        return 1
+    
+    finally:
+        # 优雅关闭
+        logging.info("🛑 正在停止监控系统...")
+        monitor_manager.stop()
+        logging.info("✅ 监控系统已停止")
+        logging.info("👋 程序已退出")
+    
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
