@@ -92,13 +92,42 @@ check_config() {
 setup_venv() {
     log "设置Python虚拟环境..."
     
+    # 检查Python版本和路径
+    python_version=$(python3 -c "import sys; print('.'.join(map(str, sys.version_info[:2])))")
+    python_path=$(which python3)
+    log "检测到Python版本: $python_version"
+    log "Python3路径: $python_path"
+    
+    # 显示所有可用的Python版本
+    log "系统中可用的Python版本:"
+    ls /usr/bin/python* 2>/dev/null || true
+    
     if [[ ! -d "$VENV_DIR" ]]; then
-        python3 -m venv "$VENV_DIR"
+        log "创建虚拟环境..."
+        # 优先选择Python 3.10
+        if command -v python3.10 >/dev/null 2>&1; then
+            log "使用Python 3.10创建虚拟环境"
+            python3.10 -m venv "$VENV_DIR"
+        else
+            log "Python 3.10不可用，使用默认python3"
+            python3 -m venv "$VENV_DIR"
+        fi
     fi
     
     if [[ -f "$APP_DIR/requirements.txt" ]]; then
-        "$VENV_DIR/bin/pip" install --upgrade pip
-        "$VENV_DIR/bin/pip" install -r "$APP_DIR/requirements.txt"
+        log "更新pip和构建工具..."
+        "$VENV_DIR/bin/pip" install --upgrade pip setuptools wheel
+        
+        log "安装项目依赖..."
+        if ! "$VENV_DIR/bin/pip" install -r "$APP_DIR/requirements.txt"; then
+            log "依赖安装失败，尝试清理并重新安装..."
+            # 清理pip缓存
+            "$VENV_DIR/bin/pip" cache purge
+            # 重新安装构建工具
+            "$VENV_DIR/bin/pip" install --upgrade --force-reinstall pip setuptools wheel
+            # 重试安装依赖
+            "$VENV_DIR/bin/pip" install --no-cache-dir -r "$APP_DIR/requirements.txt"
+        fi
     fi
 }
 
