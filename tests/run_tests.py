@@ -51,7 +51,7 @@ def run_quick_test():
     print("⚡ 运行快速验证测试...")
     try:
         result = subprocess.run([
-            sys.executable, "scripts/quick_test.py"
+            sys.executable, "tests/quick_test.py"
         ], capture_output=False, text=True)
         
         return result.returncode == 0
@@ -133,7 +133,7 @@ def run_config_test():
         
         # 测试配置管理器导入
         sys.path.append(".")
-        from config.config_manager import config_manager
+        from src.config.config_manager import config_manager
         print("  ✅ 配置管理器导入成功")
         
         # 测试默认配置
@@ -159,7 +159,7 @@ def run_performance_test():
         
         # 测试配置管理器性能
         start_time = time.time()
-        from config.config_manager import config_manager
+        from src.config.config_manager import config_manager
         config_load_time = time.time() - start_time
         print(f"  ⏱️  配置加载耗时: {config_load_time:.3f}秒")
         

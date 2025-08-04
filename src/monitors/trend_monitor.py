@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Tuple, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from config.config_manager import UserConfig, get_system_config
+from ..config.config_manager import UserConfig, get_system_config
 from ..data.yahoo import get_top_nasdaq_by_volume
 from ..indicators.trend import analyze_trend, TrendAnalysisResult
 from ..notifiers.email import send_gmail, build_trend_email_content

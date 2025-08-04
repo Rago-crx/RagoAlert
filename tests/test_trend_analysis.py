@@ -12,7 +12,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from src.indicators.trend import analyze_trend, TrendAnalysisResult
-from config.config_manager import TrendAnalysisConfig
+from src.config.config_manager import TrendAnalysisConfig
 
 
 class TestTrendAnalysis(unittest.TestCase):

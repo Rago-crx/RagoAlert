@@ -11,7 +11,7 @@ from unittest.mock import patch
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from config.config_manager import MultiUserConfigManager, UserConfig, TrendAnalysisConfig
+from src.config.config_manager import MultiUserConfigManager, UserConfig, TrendAnalysisConfig
 
 
 class TestConfigManager(unittest.TestCase):

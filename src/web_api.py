@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional, Dict, Any
 import logging
-from config.config_manager import config_manager, UserConfig, UserFluctuationConfig, UserTrendConfig
+from .config.config_manager import config_manager, UserConfig, UserFluctuationConfig, UserTrendConfig
 import os
 
 app = FastAPI(title="RagoAlert Configuration API", version="1.0.0")

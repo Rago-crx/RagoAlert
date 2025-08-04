@@ -12,7 +12,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from src.monitors.fluctuation_monitor import FluctuationMonitor
-from config.config_manager import UserConfig, UserFluctuationConfig
+from src.config.config_manager import UserConfig, UserFluctuationConfig
 from src.indicators.fluctuation import FluctuationAnalysisResult
 
 
