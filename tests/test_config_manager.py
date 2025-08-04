@@ -27,6 +27,13 @@ class TestConfigManager(unittest.TestCase):
             config_file=self.users_config_file,
             system_config_file=self.system_config_file
         )
+        
+        # 设置测试用的股票池
+        self.config_manager.system_config.stock_pools = {
+            "NASDAQ_CORE": ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA"],
+            "ai_chips": ['NVDA', 'AMD', 'ASML', 'ARM', 'INTC'],
+            "china_tech": ['BIDU', 'BABA', 'JD', 'PDD']
+        }
     
     def tearDown(self):
         """测试后清理"""

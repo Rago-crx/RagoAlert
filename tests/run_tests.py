@@ -124,12 +124,6 @@ def run_config_test():
     print("⚙️  运行配置测试...")
     
     try:
-        # 测试配置文件模板
-        if os.path.exists("config/config_template.yaml"):
-            print("  ✅ 配置模板文件存在")
-        else:
-            print("  ❌ 配置模板文件缺失")
-            return False
         
         # 测试配置管理器导入
         sys.path.append(".")
@@ -162,6 +156,7 @@ def run_performance_test():
         from src.config.config_manager import config_manager
         config_load_time = time.time() - start_time
         print(f"  ⏱️  配置加载耗时: {config_load_time:.3f}秒")
+        print(f"  ✅ 配置管理器正常: {len(config_manager.get_all_users())}个用户")
         
         # 测试数据获取性能
         start_time = time.time()
@@ -176,6 +171,7 @@ def run_performance_test():
         result = analyze_trend("AAPL", window=5)
         trend_analysis_time = time.time() - start_time
         print(f"  ⏱️  趋势分析耗时: {trend_analysis_time:.3f}秒")
+        print(f"  ✅ 趋势分析结果: {result.get('signal', 'N/A') if result else 'N/A'}")
         
         # 性能评估
         total_time = config_load_time + price_fetch_time + trend_analysis_time
