@@ -8,7 +8,7 @@
 
 ```bash
 # 登录服务器
-ssh user@server
+ssh ubuntu@server
 
 # 创建配置目录
 sudo mkdir -p /etc/ragoalert
@@ -23,7 +23,7 @@ sudo vim /etc/ragoalert/users_config.yaml
 
 ```bash
 # 在服务器上拉取代码
-ssh user@server
+ssh ubuntu@server
 cd /opt
 sudo git clone https://github.com/your-repo/RagoAlert.git
 cd RagoAlert
@@ -31,7 +31,7 @@ cd RagoAlert
 # 或更新现有代码
 sudo git pull origin main
 
-# 一键部署
+# 一键部署（使用当前用户运行服务）
 sudo ./scripts/deploy.sh deploy
 ```
 
@@ -60,6 +60,7 @@ sudo ./scripts/deploy.sh restart
 ```bash
 # 编辑配置
 sudo vim /etc/ragoalert/system_config.yaml
+sudo vim /etc/ragoalert/users_config.yaml
 
 # 重启生效
 sudo ./scripts/deploy.sh restart
@@ -97,6 +98,7 @@ sudo ./scripts/deploy.sh rollback backup_20241201_120000
 - ✅ 通过环境变量指定配置路径
 - ✅ 部署时不会影响现有配置
 - ✅ 只能通过Web API或服务器直接编辑修改
+- ✅ 服务运行在部署用户下，配置独立管理
 
 ## 🔧 常用命令
 

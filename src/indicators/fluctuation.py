@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Optional
 from datetime import datetime, timedelta
 from collections import deque
 import logging
@@ -26,7 +26,7 @@ class FluctuationAnalyzer:
         price_history: deque[Tuple[datetime, float]],
         current_price: float,
         time_window_minutes: int = 1
-    ) -> FluctuationAnalysisResult | None:
+    ) -> Optional[FluctuationAnalysisResult]:
         """
         分析股票在指定时间窗口内的价格波动。
         :param symbol: 股票代码

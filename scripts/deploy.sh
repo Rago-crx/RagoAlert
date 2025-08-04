@@ -7,6 +7,7 @@ set -e
 
 # 配置
 SERVICE_NAME="ragoalert"
+CURRENT_USER=$(whoami)
 DEPLOY_DIR="/opt/ragoalert"
 APP_DIR="$DEPLOY_DIR/app"
 CONFIG_DIR="/etc/ragoalert"
@@ -31,12 +32,6 @@ deploy() {
     
     # 创建目录结构
     mkdir -p "$DEPLOY_DIR" "$CONFIG_DIR" "$BACKUP_DIR"
-    
-    # 创建服务用户
-    if ! id "$SERVICE_NAME" &>/dev/null; then
-        log "创建服务用户: $SERVICE_NAME"
-        useradd -r -s /bin/false -d "$DEPLOY_DIR" "$SERVICE_NAME"
-    fi
     
     # 停止服务
     systemctl stop "$SERVICE_NAME" 2>/dev/null || true
@@ -63,7 +58,8 @@ deploy() {
     create_service
     
     # 设置权限
-    chown -R "$SERVICE_NAME:$SERVICE_NAME" "$DEPLOY_DIR"
+    chown -R "$CURRENT_USER:$CURRENT_USER" "$DEPLOY_DIR"
+    chown -R "$CURRENT_USER:$CURRENT_USER" "$CONFIG_DIR"
     
     # 启动服务
     systemctl daemon-reload
@@ -96,18 +92,50 @@ check_config() {
 setup_venv() {
     log "设置Python虚拟环境..."
     
+    # 检查Python版本和路径
+    python_version=$(python3 -c "import sys; print('.'.join(map(str, sys.version_info[:2])))")
+    python_path=$(which python3)
+    log "检测到Python版本: $python_version"
+    log "Python3路径: $python_path"
+    
+    # 显示所有可用的Python版本
+    log "系统中可用的Python版本:"
+    ls /usr/bin/python* 2>/dev/null || true
+    
     if [[ ! -d "$VENV_DIR" ]]; then
-        python3 -m venv "$VENV_DIR"
+        log "创建虚拟环境..."
+        # 优先选择Python 3.10
+        if command -v python3.10 >/dev/null 2>&1; then
+            log "使用Python 3.10创建虚拟环境"
+            python3.10 -m venv "$VENV_DIR"
+        else
+            log "Python 3.10不可用，使用默认python3"
+            python3 -m venv "$VENV_DIR"
+        fi
     fi
     
     if [[ -f "$APP_DIR/requirements.txt" ]]; then
-        "$VENV_DIR/bin/pip" install --upgrade pip
-        "$VENV_DIR/bin/pip" install -r "$APP_DIR/requirements.txt"
+        log "更新pip和构建工具..."
+        "$VENV_DIR/bin/pip" install --upgrade pip setuptools wheel
+        
+        log "安装项目依赖..."
+        if ! "$VENV_DIR/bin/pip" install -r "$APP_DIR/requirements.txt"; then
+            log "依赖安装失败，尝试清理并重新安装..."
+            # 清理pip缓存
+            "$VENV_DIR/bin/pip" cache purge
+            # 重新安装构建工具
+            "$VENV_DIR/bin/pip" install --upgrade --force-reinstall pip setuptools wheel
+            # 重试安装依赖
+            "$VENV_DIR/bin/pip" install --no-cache-dir -r "$APP_DIR/requirements.txt"
+        fi
     fi
 }
 
 create_service() {
     log "创建systemd服务..."
+    
+    # 获取当前用户的配置目录绝对路径
+    local config_abs_path=$(readlink -f "$CONFIG_DIR")
     
     cat > "/etc/systemd/system/$SERVICE_NAME.service" << EOF
 [Unit]
@@ -116,13 +144,13 @@ After=network.target
 
 [Service]
 Type=simple
-User=$SERVICE_NAME
-Group=$SERVICE_NAME
+User=$CURRENT_USER
+Group=$CURRENT_USER
 WorkingDirectory=$APP_DIR
 Environment=PATH=$VENV_DIR/bin:/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONPATH=$APP_DIR
-Environment=RAGOALERT_CONFIG=$CONFIG_DIR/users_config.yaml
-Environment=RAGOALERT_SYSTEM_CONFIG=$CONFIG_DIR/system_config.yaml
+Environment=RAGOALERT_CONFIG=$config_abs_path/users_config.yaml
+Environment=RAGOALERT_SYSTEM_CONFIG=$config_abs_path/system_config.yaml
 ExecStart=$VENV_DIR/bin/python $APP_DIR/main.py
 Restart=always
 RestartSec=10

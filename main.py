@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 
 from src.multi_user_monitor import monitor_manager
-from config.config_manager import config_manager
+from src.config.config_manager import config_manager
 import uvicorn
 from src.web_api import app
 

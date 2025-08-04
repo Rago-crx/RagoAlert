@@ -25,7 +25,7 @@ def test_config_system():
     print("🔧 测试配置系统...")
     
     try:
-        from config.config_manager import config_manager, UserConfig, TrendAnalysisConfig
+        from src.config.config_manager import config_manager, UserConfig, TrendAnalysisConfig
         
         # 测试系统配置
         system_config = config_manager.system_config
@@ -85,7 +85,7 @@ def test_trend_analysis():
     
     try:
         from src.indicators.trend import analyze_trend
-        from config.config_manager import TrendAnalysisConfig
+        from src.config.config_manager import TrendAnalysisConfig
         
         # 创建测试配置
         test_config = TrendAnalysisConfig(
@@ -160,7 +160,7 @@ def test_user_monitors():
     print("👥 测试用户监控器...")
     
     try:
-        from config.config_manager import UserConfig, UserFluctuationConfig, UserTrendConfig
+        from src.config.config_manager import UserConfig, UserFluctuationConfig, UserTrendConfig
         from src.monitors.fluctuation_monitor import FluctuationMonitor
         from src.monitors.trend_monitor import TrendMonitor
         
@@ -247,7 +247,7 @@ def run_integration_test():
     print("🔄 运行集成测试...")
     
     try:
-        from config.config_manager import config_manager
+        from src.config.config_manager import config_manager
         from src.multi_user_monitor import monitor_manager
         
         # 测试多用户监控管理器
@@ -272,7 +272,7 @@ def create_test_user():
     print("👤 创建测试用户...")
     
     try:
-        from config.config_manager import config_manager
+        from src.config.config_manager import config_manager
         
         test_email = "quicktest@example.com"
         

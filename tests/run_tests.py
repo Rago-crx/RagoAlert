@@ -10,6 +10,20 @@ import subprocess
 import argparse
 import time
 
+def setup_dev_environment():
+    """设置开发环境变量（与dev_start.py保持一致）"""
+    # 创建开发配置目录
+    dev_config_dir = os.path.expanduser("~/.ragoalert-dev")
+    os.makedirs(dev_config_dir, exist_ok=True)
+    
+    # 开发配置文件路径
+    dev_users_config = os.path.join(dev_config_dir, "users_config.yaml")
+    dev_system_config = os.path.join(dev_config_dir, "system_config.yaml")
+    
+    # 设置环境变量指向开发配置
+    os.environ["RAGOALERT_CONFIG"] = dev_users_config
+    os.environ["RAGOALERT_SYSTEM_CONFIG"] = dev_system_config
+
 def run_unit_tests():
     """运行单元测试"""
     print("🧪 运行单元测试...")
@@ -51,7 +65,7 @@ def run_quick_test():
     print("⚡ 运行快速验证测试...")
     try:
         result = subprocess.run([
-            sys.executable, "scripts/quick_test.py"
+            sys.executable, "tests/quick_test.py"
         ], capture_output=False, text=True)
         
         return result.returncode == 0
@@ -124,16 +138,10 @@ def run_config_test():
     print("⚙️  运行配置测试...")
     
     try:
-        # 测试配置文件模板
-        if os.path.exists("config/config_template.yaml"):
-            print("  ✅ 配置模板文件存在")
-        else:
-            print("  ❌ 配置模板文件缺失")
-            return False
         
         # 测试配置管理器导入
         sys.path.append(".")
-        from config.config_manager import config_manager
+        from src.config.config_manager import config_manager
         print("  ✅ 配置管理器导入成功")
         
         # 测试默认配置
@@ -159,9 +167,10 @@ def run_performance_test():
         
         # 测试配置管理器性能
         start_time = time.time()
-        from config.config_manager import config_manager
+        from src.config.config_manager import config_manager
         config_load_time = time.time() - start_time
         print(f"  ⏱️  配置加载耗时: {config_load_time:.3f}秒")
+        print(f"  ✅ 配置管理器正常: {len(config_manager.get_all_users())}个用户")
         
         # 测试数据获取性能
         start_time = time.time()
@@ -176,6 +185,7 @@ def run_performance_test():
         result = analyze_trend("AAPL", window=5)
         trend_analysis_time = time.time() - start_time
         print(f"  ⏱️  趋势分析耗时: {trend_analysis_time:.3f}秒")
+        print(f"  ✅ 趋势分析结果: {result.signal if result and result.signal else 'N/A'}")
         
         # 性能评估
         total_time = config_load_time + price_fetch_time + trend_analysis_time
@@ -210,6 +220,9 @@ def main():
     
     print("🧪 RagoAlert 测试运行器")
     print("=" * 50)
+    
+    # 设置开发环境变量
+    setup_dev_environment()
     
     success = True
     

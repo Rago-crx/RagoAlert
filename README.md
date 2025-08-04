@@ -88,7 +88,7 @@ python tests/dev_start.py --dev
 
 ## 🧪 开发和测试
 
-详细的开发指南请参阅 [开发文档](docs/README_DEV.md)
+详细的开发指南请参阅 [开发文档](docs/DEV.md)
 
 ```bash
 # 验证环境
@@ -104,7 +104,7 @@ python tests/run_tests.py --all
 python tests/dev_start.py --dev
 ```
 
-> **💡 开发者提示**: 使用 `--quick` 进行快速验证，用 `--all` 进行完整测试。详细说明请查看 [开发指南](docs/README_DEV.md)。
+> **💡 开发者提示**: 使用 `--quick` 进行快速验证，用 `--all` 进行完整测试。详细说明请查看 [开发指南](docs/DEV.md)。
 
 ## 📊 监控功能
 
@@ -207,15 +207,15 @@ sudo ./scripts/deploy.sh deploy
 
 部署系统确保服务器配置文件**不会被部署替换**：
 - ✅ `users_config.yaml` - 用户监控配置
-- ✅ `system_config.yaml` - 系统配置(SMTP等)  
-- ✅ `production_config.yaml` - 生产环境配置
+- ✅ `system_config.yaml` - 系统配置(SMTP等)
 
-配置只能通过以下方式修改：
+配置存储在独立目录 `/etc/ragoalert/`，可通过以下方式修改：
 1. **Web API接口** - `http://your-server:8080`
-2. **服务器直接编辑** - 管理员权限
+2. **服务器直接编辑** - 管理员权限编辑配置文件
+3. **配置独立管理** - 服务运行在部署用户下，配置文件独立存储
 
-详细部署指南请参阅 [简化部署文档](docs/DEPLOY_SIMPLE.md)
+详细部署指南请参阅 [简化部署文档](docs/DEPLOYMENT.md)
 
 ---
 
-📚 更多信息请查看 [开发文档](docs/README_DEV.md)、[简化部署指南](docs/DEPLOY_SIMPLE.md)、[配置迁移指南](docs/CONFIG_MIGRATION.md) 和 [升级指南](docs/UPGRADE_GUIDE.md)
+📚 更多信息请查看 [开发文档](docs/DEV.md)、[简化部署指南](docs/DEPLOYMENT.md)、[配置迁移指南](docs/CONFIG_MIGRATION.md) 和 [升级指南](docs/UPGRADE_GUIDE.md)

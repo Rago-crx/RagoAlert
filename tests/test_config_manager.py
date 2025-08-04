@@ -11,7 +11,7 @@ from unittest.mock import patch
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from config.config_manager import MultiUserConfigManager, UserConfig, TrendAnalysisConfig
+from src.config.config_manager import MultiUserConfigManager, UserConfig, TrendAnalysisConfig
 
 
 class TestConfigManager(unittest.TestCase):
@@ -27,6 +27,13 @@ class TestConfigManager(unittest.TestCase):
             config_file=self.users_config_file,
             system_config_file=self.system_config_file
         )
+        
+        # 设置测试用的股票池
+        self.config_manager.system_config.stock_pools = {
+            "NASDAQ_CORE": ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA"],
+            "ai_chips": ['NVDA', 'AMD', 'ASML', 'ARM', 'INTC'],
+            "china_tech": ['BIDU', 'BABA', 'JD', 'PDD']
+        }
     
     def tearDown(self):
         """测试后清理"""
