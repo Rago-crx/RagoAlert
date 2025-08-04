@@ -10,6 +10,20 @@ import subprocess
 import argparse
 import time
 
+def setup_dev_environment():
+    """设置开发环境变量（与dev_start.py保持一致）"""
+    # 创建开发配置目录
+    dev_config_dir = os.path.expanduser("~/.ragoalert-dev")
+    os.makedirs(dev_config_dir, exist_ok=True)
+    
+    # 开发配置文件路径
+    dev_users_config = os.path.join(dev_config_dir, "users_config.yaml")
+    dev_system_config = os.path.join(dev_config_dir, "system_config.yaml")
+    
+    # 设置环境变量指向开发配置
+    os.environ["RAGOALERT_CONFIG"] = dev_users_config
+    os.environ["RAGOALERT_SYSTEM_CONFIG"] = dev_system_config
+
 def run_unit_tests():
     """运行单元测试"""
     print("🧪 运行单元测试...")
@@ -206,6 +220,9 @@ def main():
     
     print("🧪 RagoAlert 测试运行器")
     print("=" * 50)
+    
+    # 设置开发环境变量
+    setup_dev_environment()
     
     success = True
     

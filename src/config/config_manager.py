@@ -129,9 +129,20 @@ class MultiUserConfigManager:
     """多用户配置管理器 - YAML版本"""
     
     def __init__(self, config_file: str = None, system_config_file: str = None):
-        # 从环境变量读取配置文件路径，如果没有则使用默认值
-        self.config_file = config_file or os.getenv('RAGOALERT_CONFIG', 'users_config.yaml')
-        self.system_config_file = system_config_file or os.getenv('RAGOALERT_SYSTEM_CONFIG', 'system_config.yaml')
+        # 从环境变量读取配置文件路径，严格要求设置环境变量
+        if config_file:
+            self.config_file = config_file
+        else:
+            self.config_file = os.getenv('RAGOALERT_CONFIG')
+            if not self.config_file:
+                raise ValueError("环境变量 RAGOALERT_CONFIG 未设置，请设置配置文件路径")
+        
+        if system_config_file:
+            self.system_config_file = system_config_file
+        else:
+            self.system_config_file = os.getenv('RAGOALERT_SYSTEM_CONFIG')
+            if not self.system_config_file:
+                raise ValueError("环境变量 RAGOALERT_SYSTEM_CONFIG 未设置，请设置系统配置文件路径")
         self.users: Dict[str, UserConfig] = {}  # email -> UserConfig
         self.system_config = SystemConfig()
         self._lock = threading.RLock()
