@@ -10,7 +10,7 @@ SERVICE_NAME="ragoalert"
 CURRENT_USER=$(whoami)
 DEPLOY_DIR="/opt/ragoalert"
 APP_DIR="$DEPLOY_DIR/app"
-CONFIG_DIR="$HOME/.ragoalert"
+CONFIG_DIR="/etc/ragoalert"
 BACKUP_DIR="$DEPLOY_DIR/backups"
 VENV_DIR="$DEPLOY_DIR/venv"
 

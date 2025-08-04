@@ -10,13 +10,13 @@
 # 登录服务器
 ssh ubuntu@server
 
-# 创建配置目录（在用户根目录下）
-mkdir -p ~/.ragoalert
+# 创建配置目录
+sudo mkdir -p /etc/ragoalert
 
-# 手动创建配置文件
+# 手动创建配置文件（管理员负责）
 # 可参考 config/config_template.yaml 作为起点
-vim ~/.ragoalert/system_config.yaml
-vim ~/.ragoalert/users_config.yaml
+sudo vim /etc/ragoalert/system_config.yaml
+sudo vim /etc/ragoalert/users_config.yaml
 ```
 
 ### 2. 部署到服务器
@@ -53,14 +53,14 @@ sudo ./scripts/deploy.sh restart
 
 ### 4. 配置管理
 
-配置文件位置：`~/.ragoalert/` (当前用户根目录下)
+配置文件位置：`/etc/ragoalert/`
 - `users_config.yaml` - 用户配置
 - `system_config.yaml` - 系统配置
 
 ```bash
-# 编辑配置（直接编辑，无需sudo）
-vim ~/.ragoalert/system_config.yaml
-vim ~/.ragoalert/users_config.yaml
+# 编辑配置
+sudo vim /etc/ragoalert/system_config.yaml
+sudo vim /etc/ragoalert/users_config.yaml
 
 # 重启生效
 sudo ./scripts/deploy.sh restart
@@ -87,18 +87,18 @@ sudo ./scripts/deploy.sh rollback backup_20241201_120000
 ├── backups/       # 自动备份
 └── venv/          # Python环境
 
-~/.ragoalert/      # 用户配置目录（如 /home/ubuntu/.ragoalert/）
+/etc/ragoalert/    # 独立配置目录
 ├── users_config.yaml
 └── system_config.yaml
 ```
 
 ## ⚙️ 配置保护
 
-- ✅ 配置文件存储在当前用户根目录下 `~/.ragoalert/`
+- ✅ 配置文件独立存储在 `/etc/ragoalert/`
 - ✅ 通过环境变量指定配置路径
 - ✅ 部署时不会影响现有配置
-- ✅ 用户可以直接编辑配置文件，也可通过Web API修改
-- ✅ 服务运行在部署用户下，权限统一
+- ✅ 只能通过Web API或服务器直接编辑修改
+- ✅ 服务运行在部署用户下，配置独立管理
 
 ## 🔧 常用命令
 

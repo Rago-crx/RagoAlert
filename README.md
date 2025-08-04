@@ -64,12 +64,12 @@ pip install -r requirements.txt
 ```bash
 # 配置文件会在首次运行时自动创建
 # 可选：预先创建配置目录和文件
-mkdir -p ~/.ragoalert
-cp config/config_template.yaml ~/.ragoalert/users_config.yaml
-cp config/config_template.yaml ~/.ragoalert/system_config.yaml
+sudo mkdir -p /etc/ragoalert
+sudo cp config/config_template.yaml /etc/ragoalert/users_config.yaml
+sudo cp config/config_template.yaml /etc/ragoalert/system_config.yaml
 
 # 编辑配置文件，设置SMTP邮箱等信息
-# vim ~/.ragoalert/system_config.yaml
+# sudo vim /etc/ragoalert/system_config.yaml
 ```
 
 ### 3. 启动系统
@@ -164,8 +164,8 @@ RESTful API支持完整的CRUD操作：
 
 ```bash
 # 生产环境
-RAGOALERT_CONFIG=~/.ragoalert/users_config.yaml      # 用户配置文件路径
-RAGOALERT_SYSTEM_CONFIG=~/.ragoalert/system_config.yaml # 系统配置文件路径
+RAGOALERT_CONFIG=/etc/ragoalert/users_config.yaml      # 用户配置文件路径
+RAGOALERT_SYSTEM_CONFIG=/etc/ragoalert/system_config.yaml # 系统配置文件路径
 
 # 开发环境（自动设置）
 RAGOALERT_CONFIG=~/.ragoalert-dev/users_config.yaml    # 开发用户配置
@@ -209,10 +209,10 @@ sudo ./scripts/deploy.sh deploy
 - ✅ `users_config.yaml` - 用户监控配置
 - ✅ `system_config.yaml` - 系统配置(SMTP等)
 
-配置存储在用户根目录下 `~/.ragoalert/`，可通过以下方式修改：
+配置存储在独立目录 `/etc/ragoalert/`，可通过以下方式修改：
 1. **Web API接口** - `http://your-server:8080`
-2. **直接编辑** - 用户可直接编辑配置文件，无需管理员权限
-3. **服务权限统一** - 服务运行在部署用户下，避免权限问题
+2. **服务器直接编辑** - 管理员权限编辑配置文件
+3. **配置独立管理** - 服务运行在部署用户下，配置文件独立存储
 
 详细部署指南请参阅 [简化部署文档](docs/DEPLOYMENT.md)
 
