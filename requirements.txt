@@ -25,4 +25,5 @@ python-multipart>=0.0.6  # FastAPI文件上传支持
 # 测试工具
 pytest>=7.0.0
 pytest-asyncio>=0.20.0
+httpx>=0.24.0  # FastAPI TestClient依赖
 
