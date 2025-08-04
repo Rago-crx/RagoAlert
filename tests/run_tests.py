@@ -185,7 +185,7 @@ def run_performance_test():
         result = analyze_trend("AAPL", window=5)
         trend_analysis_time = time.time() - start_time
         print(f"  ⏱️  趋势分析耗时: {trend_analysis_time:.3f}秒")
-        print(f"  ✅ 趋势分析结果: {result.get('signal', 'N/A') if result else 'N/A'}")
+        print(f"  ✅ 趋势分析结果: {result.signal if result and result.signal else 'N/A'}")
         
         # 性能评估
         total_time = config_load_time + price_fetch_time + trend_analysis_time
