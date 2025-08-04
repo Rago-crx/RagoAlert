@@ -7,9 +7,10 @@ set -e
 
 # 配置
 SERVICE_NAME="ragoalert"
+CURRENT_USER=$(whoami)
 DEPLOY_DIR="/opt/ragoalert"
 APP_DIR="$DEPLOY_DIR/app"
-CONFIG_DIR="/etc/ragoalert"
+CONFIG_DIR="$HOME/.ragoalert"
 BACKUP_DIR="$DEPLOY_DIR/backups"
 VENV_DIR="$DEPLOY_DIR/venv"
 
@@ -31,12 +32,6 @@ deploy() {
     
     # 创建目录结构
     mkdir -p "$DEPLOY_DIR" "$CONFIG_DIR" "$BACKUP_DIR"
-    
-    # 创建服务用户
-    if ! id "$SERVICE_NAME" &>/dev/null; then
-        log "创建服务用户: $SERVICE_NAME"
-        useradd -r -s /bin/false -d "$DEPLOY_DIR" "$SERVICE_NAME"
-    fi
     
     # 停止服务
     systemctl stop "$SERVICE_NAME" 2>/dev/null || true
@@ -63,7 +58,8 @@ deploy() {
     create_service
     
     # 设置权限
-    chown -R "$SERVICE_NAME:$SERVICE_NAME" "$DEPLOY_DIR"
+    chown -R "$CURRENT_USER:$CURRENT_USER" "$DEPLOY_DIR"
+    chown -R "$CURRENT_USER:$CURRENT_USER" "$CONFIG_DIR"
     
     # 启动服务
     systemctl daemon-reload
@@ -109,6 +105,9 @@ setup_venv() {
 create_service() {
     log "创建systemd服务..."
     
+    # 获取当前用户的配置目录绝对路径
+    local config_abs_path=$(readlink -f "$CONFIG_DIR")
+    
     cat > "/etc/systemd/system/$SERVICE_NAME.service" << EOF
 [Unit]
 Description=RagoAlert Stock Monitoring Service
@@ -116,13 +115,13 @@ After=network.target
 
 [Service]
 Type=simple
-User=$SERVICE_NAME
-Group=$SERVICE_NAME
+User=$CURRENT_USER
+Group=$CURRENT_USER
 WorkingDirectory=$APP_DIR
 Environment=PATH=$VENV_DIR/bin:/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONPATH=$APP_DIR
-Environment=RAGOALERT_CONFIG=$CONFIG_DIR/users_config.yaml
-Environment=RAGOALERT_SYSTEM_CONFIG=$CONFIG_DIR/system_config.yaml
+Environment=RAGOALERT_CONFIG=$config_abs_path/users_config.yaml
+Environment=RAGOALERT_SYSTEM_CONFIG=$config_abs_path/system_config.yaml
 ExecStart=$VENV_DIR/bin/python $APP_DIR/main.py
 Restart=always
 RestartSec=10
