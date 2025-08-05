@@ -10,9 +10,9 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Set
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from .config.config_manager import config_manager, UserConfig
-from .monitors.fluctuation_monitor import FluctuationMonitor
-from .monitors.trend_monitor import TrendMonitor
+from src.config.config_manager import config_manager, UserConfig
+from src.monitors.fluctuation_monitor import FluctuationMonitor
+from src.monitors.trend_monitor import TrendMonitor
 
 
 class MultiUserMonitorManager:

@@ -8,10 +8,10 @@ from datetime import datetime, timedelta
 from typing import Dict, Tuple, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from ..config.config_manager import UserConfig, get_system_config
-from ..data.yahoo import get_top_nasdaq_by_volume
-from ..indicators.trend import analyze_trend, TrendAnalysisResult
-from ..notifiers.email import send_gmail, build_trend_email_content
+from src.config.config_manager import UserConfig, get_system_config
+from src.data.yahoo import get_top_nasdaq_by_volume
+from src.indicators.trend import analyze_trend, TrendAnalysisResult
+from src.notifiers.email import send_gmail, build_trend_email_content
 
 
 class TrendMonitor:
