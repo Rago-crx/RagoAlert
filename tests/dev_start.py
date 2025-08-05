@@ -65,7 +65,7 @@ def generate_test_data():
 def start_web_service():
     """启动Web服务"""
     print("🌐 启动Web服务...")
-    print("访问地址: http://localhost:8080")
+    print("访问地址: http://localhost:9797")
     print("按 Ctrl+C 停止服务")
     
     try:
