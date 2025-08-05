@@ -4,7 +4,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from typing import List, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from ..config.config_manager import config_manager
+from src.config.config_manager import config_manager
 
 def fetch_volume(symbol):
     try:

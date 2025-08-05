@@ -5,7 +5,7 @@ from typing import List, Optional
 import yfinance as yf
 import pandas_ta as ta
 
-from ..config.config_manager import get_trend_analysis_config, TrendAnalysisConfig
+from src.config.config_manager import get_trend_analysis_config, TrendAnalysisConfig
 
 @dataclass
 class IndicatorSnapshot:

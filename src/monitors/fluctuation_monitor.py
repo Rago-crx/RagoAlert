@@ -8,10 +8,10 @@ from datetime import datetime, timedelta
 from typing import List, Dict
 from collections import deque
 
-from ..config.config_manager import UserConfig, get_system_config
-from ..data.yahoo import get_current_price
-from ..notifiers.email import send_gmail, build_fluctuation_email_content
-from ..indicators.fluctuation import FluctuationAnalyzer, FluctuationAnalysisResult
+from src.config.config_manager import UserConfig, get_system_config
+from src.data.yahoo import get_current_price
+from src.notifiers.email import send_gmail, build_fluctuation_email_content
+from src.indicators.fluctuation import FluctuationAnalyzer, FluctuationAnalysisResult
 
 
 class FluctuationMonitor:

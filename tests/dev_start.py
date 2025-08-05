@@ -15,32 +15,25 @@ def setup_dev_environment():
     """设置开发环境"""
     print("🔧 设置开发环境...")
     
-    # 创建开发配置目录
-    dev_config_dir = os.path.expanduser("~/.ragoalert-dev")
-    os.makedirs(dev_config_dir, exist_ok=True)
+    # 获取项目根目录
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
-    # 开发配置文件路径
-    dev_users_config = os.path.join(dev_config_dir, "users_config.yaml")
-    dev_system_config = os.path.join(dev_config_dir, "system_config.yaml")
+    # 开发配置文件路径（直接使用根目录的配置文件）
+    dev_users_config = os.path.join(project_root, "users_config.yaml")
+    dev_system_config = os.path.join(project_root, "system_config.yaml")
     
-    # 如果开发配置不存在，从模板创建
+    # 检查配置文件是否存在
     if not os.path.exists(dev_users_config):
-        if os.path.exists("config/config_dev.yaml"):
-            import shutil
-            shutil.copy("config/config_dev.yaml", dev_users_config)
-            print(f"✅ 创建开发用户配置: {dev_users_config}")
-        else:
-            print("❌ 开发配置模板 config/config_dev.yaml 不存在")
-            print("请先运行: python tests/test_data_generator.py")
-            return False
+        print(f"❌ 用户配置文件不存在: {dev_users_config}")
+        print("请确保项目根目录下存在 users_config.yaml 文件")
+        return False
     
     if not os.path.exists(dev_system_config):
-        if os.path.exists("config/config_dev.yaml"):
-            import shutil
-            shutil.copy("config/config_dev.yaml", dev_system_config)
-            print(f"✅ 创建开发系统配置: {dev_system_config}")
+        print(f"❌ 系统配置文件不存在: {dev_system_config}")
+        print("请确保项目根目录下存在 system_config.yaml 文件")
+        return False
     
-    # 设置环境变量指向开发配置
+    # 设置环境变量指向根目录配置文件
     os.environ["RAGOALERT_CONFIG"] = dev_users_config
     os.environ["RAGOALERT_SYSTEM_CONFIG"] = dev_system_config
     
@@ -77,7 +70,7 @@ def start_web_service():
     
     try:
         result = subprocess.run([
-            sys.executable, "src/web_api.py"
+            sys.executable, "-m", "uvicorn", "src.web_api:app", "--host", "0.0.0.0", "--port", "8080"
         ], capture_output=False)
         return result.returncode == 0
     except KeyboardInterrupt:
@@ -110,7 +103,7 @@ def run_development_mode():
     try:
         # 启动Web服务
         web_process = subprocess.Popen([
-            sys.executable, "src/web_api.py"
+            sys.executable, "-m", "uvicorn", "src.web_api:app", "--host", "0.0.0.0", "--port", "8080"
         ])
         processes.append(("Web服务", web_process))
         
@@ -158,15 +151,22 @@ def show_dev_status():
     print("=" * 50)
     
     # 检查配置文件
-    config_files = ["config_dev.yaml", "config_template.yaml"]
+    config_files = ["users_config.yaml", "system_config.yaml"]
     for config_file in config_files:
         if os.path.exists(config_file):
             print(f"✅ {config_file}")
         else:
             print(f"❌ {config_file} (缺失)")
     
+    # 检查配置模板
+    template_file = "src/config/config_template.yaml"
+    if os.path.exists(template_file):
+        print(f"✅ {template_file}")
+    else:
+        print(f"❌ {template_file} (缺失)")
+    
     # 检查测试文件
-    test_files = ["run_tests.py", "quick_test.py", "test_data_generator.py"]
+    test_files = ["tests/run_tests.py", "tests/quick_test.py", "tests/test_data_generator.py"]
     for test_file in test_files:
         if os.path.exists(test_file):
             print(f"✅ {test_file}")

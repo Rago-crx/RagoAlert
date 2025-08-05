@@ -4,8 +4,8 @@ from email.utils import formataddr
 from typing import List, Tuple, Dict, Optional
 
 from email.mime.multipart import MIMEMultipart
-from ..indicators.trend import TrendAnalysisResult
-from ..indicators.fluctuation import FluctuationAnalysisResult
+from src.indicators.trend import TrendAnalysisResult
+from src.indicators.fluctuation import FluctuationAnalysisResult
 
 
 def build_trend_email_content(
